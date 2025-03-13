@@ -1,8 +1,10 @@
 use chrono::prelude::*;
+use rand::Rng;
 use serde::{Serialize, Deserialize};
 
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
+use std::time::Instant;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NodeRecord {
@@ -42,15 +44,23 @@ impl IpSearcher {
         self.inner.get(&q)
     }
 
-    pub fn queries(&self, q: Vec<Ipv4Addr>) -> Vec<Option<&IpNode>> {
+    pub fn queries(&self, q: &Vec<Ipv4Addr>) -> Vec<Option<&IpNode>> {
         q.iter().map(|q| self.query(*q)).collect()
     }
 }
 
-fn main() {
-    println!("Hello, world!");
+pub fn generate_ips(n: usize) -> Vec<Ipv4Addr> {
+    let mut thread_rng = rand::rng();
+    (0..n)
+        .map(|_| Ipv4Addr::from_bits(thread_rng.random_range(0u32..u32::MAX)))
+        .collect()
+}
 
+fn main() {
+    println!("Creating new IpSearcher...");
     let mut ips = IpSearcher::new();
+
+    println!("Inserting one record...");
     ips.insert(
         Ipv4Addr::new(10, 51, 3, 41),
         NodeRecord {
@@ -59,12 +69,18 @@ fn main() {
             is_latest: true,
         },
     );
-    println!("{:?}", ips);
 
-    let q = vec![Ipv4Addr::new(10, 51, 3, 41), Ipv4Addr::new(127, 0, 0, 1)];
-    let r = ips.queries(q);
-    println!("{:?}", r);
+    println!("Generating 10_000_000 random Ipv4 addresses...");
+    let qs = generate_ips(10_000_000);
+    println!("Ok, now querying tree...");
 
-    let ser = serde_json::to_string(&ips).unwrap();
-    println!("{}", ser);
+    let start = Instant::now();
+    let _ = ips.queries(&qs);
+    let elapsed = start.elapsed();
+    println!(
+        "Elapsed {:?} ms for {:?} ip lookups, {:?} ns per lookup",
+        elapsed.as_millis() as f64,
+        qs.len(),
+        elapsed.as_nanos() as f64 / qs.len() as f64,
+    );
 }
