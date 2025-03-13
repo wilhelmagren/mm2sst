@@ -72,6 +72,18 @@ fn main() {
 
     println!("Generating 10_000_000 random Ipv4 addresses...");
     let qs = generate_ips(10_000_000);
+    println!("Ok, inserting to tree...");
+
+    for ip in &qs {
+        ips.insert(
+            *ip,
+            NodeRecord {
+                geo_location: "Stockholm, Sweden".to_string(),
+                utc: Utc::now(),
+                is_latest: true,
+            },
+        );
+    }
     println!("Ok, now querying tree...");
 
     let start = Instant::now();
