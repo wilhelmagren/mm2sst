@@ -1,12 +1,23 @@
+pub mod btreemap;
 pub mod hashmap;
-pub use hashmap::{HashMapIpSearcher, NodeRecord};
+
+pub use btreemap::BTreeMapIpSearcher;
+pub use hashmap::HashMapIpSearcher;
 
 use chrono::prelude::*;
+use clap::{value_parser, ValueEnum, ArgAction, Parser};
 use rand::Rng;
 use serde::{Serialize, Deserialize};
 
 use std::net::Ipv4Addr;
 use std::time::Instant;
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct NodeRecord {
+    pub geo_location: String,
+    pub utc: DateTime<Utc>,
+    pub is_latest: bool,
+}
 
 pub fn generate_ips(n: usize) -> Vec<Ipv4Addr> {
     let mut thread_rng = rand::rng();
@@ -15,33 +26,103 @@ pub fn generate_ips(n: usize) -> Vec<Ipv4Addr> {
         .collect()
 }
 
-fn main() {
-    println!("Creating new IpSearcher...");
-    let mut hm_ip_s = HashMapIpSearcher::new();
+#[derive(ValueEnum, Clone)]
+pub enum Algorithm {
+    Btreemap,
+    Hashmap,
+}
 
-    println!("Generating 10_000_000 random Ipv4 addresses...");
-    let qs = generate_ips(10_000_000);
-    println!("Ok, inserting to tree...");
+#[derive(Parser)]
+#[command(
+    name = "ips",
+    author,
+    version,
+    about,
+    long_about = None,
+)]
+pub struct Cli {
+    #[arg(
+        short = 'n',
+        long = "n-queries",
+        action = ArgAction::Set,
+        default_value = "1000000",
+        value_parser = value_parser!(usize),
+        required = false,
+    )]
+    n_queries: usize,
 
-    for ip in &qs {
-        hm_ip_s.insert(
-            *ip,
-            NodeRecord {
-                geo_location: "Stockholm, Sweden".to_string(),
-                utc: Utc::now(),
-                is_latest: true,
+    #[arg(
+        short = 'a',
+        long = "algorithm",
+        action = ArgAction::Set,
+        default_value = "hashmap",
+        value_parser = value_parser!(Algorithm),
+        required = false,
+    )]
+    algorithm: Algorithm,
+}
+
+impl Cli {
+    pub fn run(&self) {
+        let n_queries: usize = self.n_queries;
+        println!("Generating {} random Ipv4 addresses...", n_queries);
+        let queries = generate_ips(n_queries);
+
+        match &self.algorithm {
+            Algorithm::Btreemap => {
+                let mut algo = BTreeMapIpSearcher::new();
+                println!("(BTreeMap) Inserting Ipv4 addresses...");
+                for ip in &queries {
+                    algo.insert(
+                        *ip,
+                        NodeRecord {
+                            geo_location: "Stockholm, Sweden".to_string(),
+                            utc: Utc::now(),
+                            is_latest: true,
+                        },
+                    );
+                }
+
+                println!("(BTreeMap) Making {} queries...", n_queries);
+                let start = Instant::now();
+                let _ = algo.queries(&queries);
+                let elapsed = start.elapsed();
+                println!(
+                    "(BTreeMap) Elapsed {:?} ms for {:?} ip lookups, {:?} ns per lookup",
+                    elapsed.as_millis() as f64,
+                    queries.len(),
+                    elapsed.as_nanos() as f64 / queries.len() as f64,
+                );
             },
-        );
-    }
-    println!("Ok, now querying tree...");
+            Algorithm::Hashmap => {
+                let mut algo = HashMapIpSearcher::new();
+                println!("(HashMap) Inserting Ipv4 addresses...");
+                for ip in &queries {
+                    algo.insert(
+                        *ip,
+                        NodeRecord {
+                            geo_location: "Stockholm, Sweden".to_string(),
+                            utc: Utc::now(),
+                            is_latest: true,
+                        },
+                    );
+                }
 
-    let start = Instant::now();
-    let _ = hm_ip_s.queries(&qs);
-    let elapsed = start.elapsed();
-    println!(
-        "Elapsed {:?} ms for {:?} ip lookups, {:?} ns per lookup",
-        elapsed.as_millis() as f64,
-        qs.len(),
-        elapsed.as_nanos() as f64 / qs.len() as f64,
-    );
+                println!("(HashMap) Making {} queries...", n_queries);
+                let start = Instant::now();
+                let _ = algo.queries(&queries);
+                let elapsed = start.elapsed();
+                println!(
+                    "(HashMap) Elapsed {:?} ms for {:?} ip lookups, {:?} ns per lookup",
+                    elapsed.as_millis() as f64,
+                    queries.len(),
+                    elapsed.as_nanos() as f64 / queries.len() as f64,
+                );
+            }
+        }
+    }
+}
+
+fn main() {
+    Cli::parse().run();
 }

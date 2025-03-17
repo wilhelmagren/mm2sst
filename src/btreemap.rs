@@ -4,21 +4,21 @@ use rayon::prelude::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use serde::{Deserialize, Serialize};
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::net::Ipv4Addr;
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct HashMapIpSearcher {
-    pub inner: HashMap<Ipv4Addr, Vec<NodeRecord>>,
+pub struct BTreeMapIpSearcher {
+    inner: BTreeMap<Ipv4Addr, Vec<NodeRecord>>,
 }
 
-impl HashMapIpSearcher {
+impl BTreeMapIpSearcher {
     pub fn new() -> Self {
-        HashMapIpSearcher { inner: HashMap::new() }
+        BTreeMapIpSearcher { inner: BTreeMap::new() }
     }
 
-    pub fn from_hashmap(hm: HashMap<Ipv4Addr, Vec<NodeRecord>>) -> Self {
-        HashMapIpSearcher { inner: hm }
+    pub fn from_btreemap(btmap: BTreeMap<Ipv4Addr, Vec<NodeRecord>>) -> Self {
+        BTreeMapIpSearcher { inner: btmap }
     }
 
     pub fn insert(&mut self, ip: Ipv4Addr, n: NodeRecord) {
