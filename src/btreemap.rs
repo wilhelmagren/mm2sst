@@ -1,20 +1,21 @@
 use crate::NodeRecord;
 
-use rayon::prelude::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
-use serde::{Deserialize, Serialize};
+use rayon::prelude::IntoParallelRefIterator;
 
 use std::collections::BTreeMap;
 use std::net::Ipv4Addr;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
 pub struct BTreeMapIpSearcher {
     inner: BTreeMap<Ipv4Addr, Vec<NodeRecord>>,
 }
 
 impl BTreeMapIpSearcher {
     pub fn new() -> Self {
-        BTreeMapIpSearcher { inner: BTreeMap::new() }
+        BTreeMapIpSearcher {
+            inner: BTreeMap::new(),
+        }
     }
 
     pub fn from_btreemap(btmap: BTreeMap<Ipv4Addr, Vec<NodeRecord>>) -> Self {

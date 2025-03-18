@@ -4,18 +4,18 @@ pub mod hashmap;
 pub use btreemap::BTreeMapIpSearcher;
 pub use hashmap::HashMapIpSearcher;
 
+use bincode::{Decode, Encode};
 use chrono::prelude::*;
-use clap::{value_parser, ValueEnum, ArgAction, Parser};
+use clap::{ArgAction, Parser, ValueEnum, value_parser};
 use rand::Rng;
-use serde::{Serialize, Deserialize};
 
 use std::net::Ipv4Addr;
 use std::time::Instant;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Decode, Encode)]
 pub struct NodeRecord {
     pub geo_location: String,
-    pub utc: DateTime<Utc>,
+    pub utc: String,
     pub is_latest: bool,
 }
 
@@ -77,7 +77,7 @@ impl Cli {
                         *ip,
                         NodeRecord {
                             geo_location: "Stockholm, Sweden".to_string(),
-                            utc: Utc::now(),
+                            utc: Utc::now().to_string(),
                             is_latest: true,
                         },
                     );
@@ -93,16 +93,17 @@ impl Cli {
                     queries.len(),
                     elapsed.as_nanos() as f64 / queries.len() as f64,
                 );
-            },
+            }
             Algorithm::Hashmap => {
-                let mut algo = HashMapIpSearcher::new();
-                println!("(HashMap) Inserting Ipv4 addresses...");
+                println!("(HashMap) reading existing data from `hashmap.bin`...");
+                let mut algo = HashMapIpSearcher::from_file("hashmap.bin");
+                println!("(HashMap) Ok, inserting Ipv4 addresses...");
                 for ip in &queries {
                     algo.insert(
                         *ip,
                         NodeRecord {
                             geo_location: "Stockholm, Sweden".to_string(),
-                            utc: Utc::now(),
+                            utc: Utc::now().to_string(),
                             is_latest: true,
                         },
                     );
@@ -118,6 +119,10 @@ impl Cli {
                     queries.len(),
                     elapsed.as_nanos() as f64 / queries.len() as f64,
                 );
+
+                println!("(HashMap) writing data to binary file...");
+                algo.write_to_file("hashmap.bin");
+                println!("(HashMap) Ok, wrote to `hashmap.bin`!");
             }
         }
     }
