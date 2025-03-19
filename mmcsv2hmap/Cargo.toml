@@ -1,0 +1,8 @@
+[package]
+name = "mmcsv2hmap"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+datafusion = "46.0.0"
+tokio = { version = "1.44.1", features = ["rt", "rt-multi-thread"] }
