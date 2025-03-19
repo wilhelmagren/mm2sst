@@ -64,6 +64,8 @@ impl<V: Copy> Default for IpTrieNode<V> {
     }
 }
 
+/// THIS WAS OLD; I DID NOT DO A RADIX TRIE, ONLY A TRIE.
+///
 /// Implementation of a generic Radix Tree.
 ///
 /// A `radix tree` is a data structure that represents a space-optimized trie (prefix tree)
@@ -92,6 +94,8 @@ impl<V: Copy> Default for IpTrieNode<V> {
 /// will obviously take longer for IPv6 compared to IPv4, but they scale similarly.
 ///
 ///
+
+
 #[derive(Debug, Clone)]
 pub struct IpTrie<V: Copy> {
     root: IpTrieNode<V>,
@@ -122,6 +126,7 @@ impl<V: Copy> IpTrie<V> {
 }
 
 /// CIDR range for IPv4, so we work with unsigned 32 bit integers.
+#[derive(Debug)]
 pub struct Ipv4CidrRange {
     ip: u32,
     mask: u32,
