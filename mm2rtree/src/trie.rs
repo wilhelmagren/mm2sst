@@ -1,14 +1,14 @@
 use std::net::Ipv4Addr;
 
-/// Implementation of a generic Radix Tree node.
+/// Implementation of a generic Trie node.
 #[derive(Debug, Clone)]
-pub struct IpTrieNode<V> {
+pub struct IpTrieNode<V: Copy> {
     l: Option<Box<IpTrieNode<V>>>,
     r: Option<Box<IpTrieNode<V>>>,
     v: Option<V>,
 }
 
-impl<V> IpTrieNode<V> {
+impl<V: Copy> IpTrieNode<V> {
     /// Create a new empty node.
     pub fn new() -> Self {
         IpTrieNode { l: None, r: None, v: None }
@@ -31,6 +31,11 @@ impl<V> IpTrieNode<V> {
         match next_node {
             Some(n) => n.insert(ip << 1, mask << 1, value),
             None => {
+                // If there was no node then we need to create a new one and insert to,
+                // also link it to the current node.
+                let mut new_node = IpTrieNode::<V> { l: None, r: None, v: None };
+                new_node.insert(ip << 1, mask << 1, value);
+                *next_node = Some(Box::new(new_node));
             }
         };
     }
@@ -39,12 +44,21 @@ impl<V> IpTrieNode<V> {
         self._get(key, mask, None)
     }
 
-    fn _get(&self, key: u32, mask: u32, val: Option<V>) -> Option<V> {
-        todo!()
+    fn _get(&self, ip: u32, mask: u32, value: Option<V>) -> Option<V> {
+        let bit: u32 = 0x80000000;
+        if mask == 0 {
+            return self.v.or(value);
+        };
+
+        let next_node = if (ip & bit) == 0 { &self.l } else { &self.r };
+        match next_node {
+            Some(n) => n._get(ip << 1, mask << 1, self.v.or(value)),
+            None => self.v.or(value),
+        }
     }
 }
 
-impl<V> Default for IpTrieNode<V> {
+impl<V: Copy> Default for IpTrieNode<V> {
     fn default() -> Self {
         IpTrieNode::new()
     }
@@ -79,11 +93,11 @@ impl<V> Default for IpTrieNode<V> {
 ///
 ///
 #[derive(Debug, Clone)]
-pub struct IpTrie<V> {
+pub struct IpTrie<V: Copy> {
     root: IpTrieNode<V>,
 }
 
-impl<V> IpTrie<V> {
+impl<V: Copy> IpTrie<V> {
     /// Create a new empty trie.
     pub fn new() -> Self {
         IpTrie { root: IpTrieNode::new() }
@@ -94,7 +108,8 @@ impl<V> IpTrie<V> {
     }
 
     pub fn add_cidr(&mut self, cidr: Ipv4CidrRange, value: V) {
-        self.root.insert(cidr.ip, cidr.mask, value);
+        let mask: u32 = 0xffffffffu32 & !((1u32 << (32 - cidr.mask)) - 1);
+        self.root.insert(cidr.ip, mask, value);
     }
 
     pub fn contains_ip(&self, addr: Ipv4Addr) -> bool {
